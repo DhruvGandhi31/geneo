@@ -2,7 +2,7 @@ import numpy as np
 import platform
 if platform.system() == "Darwin":
     import matplotlib
-    matplotlib.use("TkAgg")
+    matplotlib.use("Agg")
 import dionysus as di
 from itertools import combinations
 import matplotlib.pyplot as plt
@@ -14,6 +14,7 @@ from geneo.read_data import DataSet
 from geneo.gaussian_ieneo import IENEO
 from geneo.constants import PERSISTENCE_PARAMS
 from geneo.utils import bin_coeff
+
 
 class Observer:
     """An observer can be described as an entity capable of measuring similarity
@@ -34,24 +35,23 @@ class Observer:
     operators : list
         List of operators available to the observer to measure the signal
     """
+
     def __init__(self, geneos, observed_signal_dimension=2,
                  persistence_params=None, convolve_params=None):
-        ### NOTE: probably an input  "operators parameters" will also be needed
+        # NOTE: probably an input  "operators parameters" will also be needed
         self.operators = geneos
         self._num_of_operators = len(geneos)
         self.observable_dim = observed_signal_dimension
         self.persistence_params = persistence_params
         self.convolve_params = convolve_params
-        [f.generate(dim = self.observable_dim)
+        [f.generate(dim=self.observable_dim)
          for f in self.operators]
         self.sampled_operators = None
         self.selected_operators = None
 
-
     @property
     def persistence_params(self):
         return self._persistence_params
-
 
     @persistence_params.setter
     def persistence_params(self, new_params):
@@ -59,11 +59,9 @@ class Observer:
             new_params = PERSISTENCE_PARAMS
         self._persistence_params = new_params
 
-
     @property
     def hom_deg(self):
         return self._hom_deg
-
 
     @hom_deg.setter
     def hom_deg(self, new_hom_deg):
@@ -72,54 +70,50 @@ class Observer:
         else:
             if new_hom_deg != self.hom_deg:
                 message = ("The homoloy degree used for comparisons was" +
-                "{} and cannot be modified to {}".format(self.hom_deg, new_hom_deg))
+                           "{} and cannot be modified to {}".format(self.hom_deg, new_hom_deg))
                 raise ValueError(message)
-
 
     @property
     def num_of_operators(self):
         return self._num_of_operators
 
-
     @staticmethod
     def evaluate_operator_on_signal_class(operator, signals, hom_deg,
                                           persistence_params, convolve_params):
-        #convolve operator with all signals and compute hom_degth persistence
-        #diagram
+        # convolve operator with all signals and compute hom_degth persistence
+        # diagram
 
         diags = [operator.convolve_and_get_persistence(signal,
-                               persistence_params =persistence_params,
-                               convolve_params =convolve_params)[hom_deg]
+                                                       persistence_params=persistence_params,
+                                                       convolve_params=convolve_params)[hom_deg]
                  for signal in signals]
-        #get all the possible pairs of persistence diagrams(without repetitions)
+        # get all the possible pairs of persistence diagrams(without repetitions)
         # hence pairs of the form
         # ( D_{hom_deg}(operator(signal_i)), D_{hom_deg}(operator(signal_j)) )
         diags_pairs = combinations(diags, 2)
         # compute the pairwise bottleneck distance
         distances = [di.bottleneck_distance(*diags) for diags in diags_pairs]
         # return the max
-        #print("len distances ", len(distances), "len(signals) ",len(signals))
+        # print("len distances ", len(distances), "len(signals) ",len(signals))
         maximum = np.max(distances)
         return maximum
 
-
     def select_per_class(self, signal_class, hom_deg,
-                                              threshold):
-        #evaluate in parallel all the operators on the signal samples belonging
-        #to a fixed class
+                         threshold):
+        # evaluate in parallel all the operators on the signal samples belonging
+        # to a fixed class
         evals = parmap.map(self.evaluate_operator_on_signal_class,
                            self.operators, signal_class, hom_deg,
                            self.persistence_params, self.convolve_params,
                            pm_pbar=True)
-        #print("num self.operators ",len(self.operators))
-        #compute the standard deviation of the evaluations
+        # print("num self.operators ",len(self.operators))
+        # compute the standard deviation of the evaluations
         std = np.std(evals)
-        #select the indices of the operators that are below std * threshold
+        # select the indices of the operators that are below std * threshold
         return [i for i, e in enumerate(evals) if e < threshold * std]
 
-
-    def select_filters_on_signal_set(self, train_signals, hom_deg = 1,
-                                     threshold = 1.5, max_ops_per_class = None):
+    def select_filters_on_signal_set(self, train_signals, hom_deg=1,
+                                     threshold=1.5, max_ops_per_class=None):
         """
         We select operators that represent in a similar way a set of signals
         belonging to the same class. The algorithm is structured as follows
@@ -139,7 +133,7 @@ class Observer:
         self._hom_deg = hom_deg
         indices = []
 
-        for c in tqdm(train_signals, desc = "Selecting operators"):
+        for c in tqdm(train_signals, desc="Selecting operators"):
             signals = train_signals[c]
             indices_c = self.select_per_class(signals, hom_deg, threshold)
             if max_ops_per_class is not None:
@@ -159,7 +153,6 @@ class Observer:
                      for s in signals]
         return func(pair_eval)
 
-
     def get_pairwise_ops_distance(self, signals, operators=None, func=None):
         if operators is None:
             operators = self.get_operators()
@@ -169,12 +162,11 @@ class Observer:
                            self.hom_deg, func, pm_pbar=True)
         return evals
 
-
     def get_pairwise_ops_distance_per_class(self, train_signals, indices, func):
         num_classes = len(list(train_signals.keys()))
         distances_per_class = np.zeros((num_classes, len(indices)))
 
-        for i, c in enumerate(tqdm(train_signals, desc = "Sampling operators")):
+        for i, c in enumerate(tqdm(train_signals, desc="Sampling operators")):
             signals = train_signals[c]
             # compute pairwise distances of operators on the signal belonging to
             # the same class
@@ -183,19 +175,16 @@ class Observer:
 
         return distances_per_class
 
-
     @staticmethod
     def find_value_in_cols(matrix, value):
         return np.where(matrix == value)[1]
-
 
     def assign_interclass_sampling_score(self, distances, indices):
         distances_argsort = np.argsort(distances, axis=1)
         return [sum(self.find_value_in_cols(distances_argsort, i))
                 for i in range(len(indices))]
 
-
-    def sample_operators(self, train_signals, func=np.max, th_per = 75):
+    def sample_operators(self, train_signals, func=np.max, th_per=75):
         """
         We sample operators to avoid storing filters that would focus on the
         same or similar characteristic across classes. We proceed as follows:
@@ -228,9 +217,9 @@ class Observer:
         # row is a pair of operators organized according to indices
         distances = self.get_pairwise_ops_distance_per_class(train_signals,
                                                              indices, func)
-        #scores determine which operators are further apart with respect to all
+        # scores determine which operators are further apart with respect to all
         scores = self.assign_interclass_sampling_score(distances, indices)
-        #threshold operators
+        # threshold operators
         th = np.percentile(scores, th_per)
         contrastive_pairs_indices = [set(indices[i])
                                      for i, s in enumerate(scores) if s > th]
@@ -238,10 +227,9 @@ class Observer:
         self.sampled_operators = [operators[ind] for ind in
                                   contrastive_pairs_indices]
 
-
-    def get_distance_signals(self, s1, s2, func = np.max):
+    def get_distance_signals(self, s1, s2, func=np.max):
         operators = self.get_operators()
-        ### TODO parallelize this if it is too slow
+        # TODO parallelize this if it is too slow
         # distances = parmap.map(op.get_signals_distance, operators, self.hom_deg,
         #                        self.persistence_params, self.convolve_params,
         #                        pm_pbar=True)
@@ -251,9 +239,8 @@ class Observer:
                      for op in operators]
         return func(distances)
 
-
     def get_operators(self):
-        #XXX It will become a property once the code is stable
+        # XXX It will become a property once the code is stable
         if self.sampled_operators is not None:
             ops = self.sampled_operators
         elif self.selected_operators is not None:
@@ -274,11 +261,10 @@ class Observer:
         return np.load(path).item()
 
 
-
 if __name__ == "__main__":
     from geneo.utils import init_operators
     ops = init_operators(IENEO)
     observer = Observer(ops)
-    data = DataSet('mnist', num_samples_from_training = 10)
-    #visualise convolution with a specific image
+    data = DataSet('mnist', num_samples_from_training=10)
+    # visualise convolution with a specific image
     observer.visualise_conv(data.x_train[0])
