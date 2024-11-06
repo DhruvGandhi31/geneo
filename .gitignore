@@ -1,0 +1,23 @@
+#ignore all kind of files
+*
+!*/
+#except files with extension
+!*.py
+!.gitignore
+!*.pdf
+!*.png
+!*.csv
+!*.md
+!*.html
+!*.rst
+!*.doctree
+!*.txt
+!*.buildinfo
+!*.nojekyll
+!*.inv
+!*.js
+!*.doctree
+!*.pickle
+!*.svg
+!*.npy
+!Makefile
