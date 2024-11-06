@@ -55,7 +55,7 @@ EXCLUDE_FROM_PACKAGES = []
 
 setup(
     name='geneo',
-    version='0.0.0-prealpha',
+    version='0.0.0.dev0',
     python_requires='>={}.{}'.format(*REQUIRED_PYTHON),
     url='',
     author='',
