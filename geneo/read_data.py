@@ -7,6 +7,7 @@ import cv2 as cv
 import importlib as imp
 import platform
 import numpy as np
+from tensorflow.keras.utils import to_categorical
 if platform.system() == "Darwin":
     import matplotlib
     matplotlib.use("Agg")
@@ -49,8 +50,8 @@ class DataSet:
             perm = np.random.permutation(len(self.x_train))
             self.x_train = self.x_train[perm][:num_samples_from_training]
             self.y_train = self.y_train[perm][:num_samples_from_training]
-        self.y_train = keras.utils.np_utils.to_categorical(self.y_train)
-        self.y_test = keras.utils.np_utils.to_categorical(self.y_test)
+        self.y_train = to_categorical(self.y_train)
+        self.y_test = to_categorical(self.y_test)
 
     @property
     def name(self):
