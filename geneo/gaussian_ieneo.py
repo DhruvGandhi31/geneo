@@ -59,7 +59,7 @@ class IENEO:
 
     @property
     def number_of_parameters(self):
-        if isinstnace(self.centers, list):
+        if isinstance(self.centers, list):
             c = len(self.centers)
         elif isinstance(self.centers, int):
             c = self.centers
@@ -161,17 +161,27 @@ class IENEO:
         return self.gaussian(x, c, s) + self.gaussian(-x, c, s)
 
     def generate_1d(self, coefficients=None):
-        if coefficents is None:
+        if coefficients is None:
             self.coefficients = self.uniform_initializer(self.components)
         else:
             self.coefficients = coefficients
+
+        # Normalize coefficients
         self.coefficients = self.coeffs_normalization(regularize=True)
+
+        # Create an array of points from -1 to 1
         x = np.linspace(-1, 1, self.size)
+
+        # Generate symmetric Gaussians based on the coefficients, centers, and sigmas
         sym_gaussians = np.asarray([coeff * self.get_sym_gaussian(x, center, s)
                                     for coeff, center, s
                                     in zip(self.coefficients, self.centers, self.sigma)])
+
+        # Sum the symmetric Gaussians and ensure the result is non-negative
         sym_gaussians = np.sum(sym_gaussians, axis=0)
+        # Make sure no negative values
         sym_gaussians += abs(sym_gaussians.min())
+
         return sym_gaussians
 
     # @classmethod

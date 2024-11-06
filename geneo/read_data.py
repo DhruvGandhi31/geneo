@@ -31,7 +31,7 @@ class DataSet:
     def __init__(self, name=None, label_mode='fine',
                  num_samples_from_training=None, num_classes=None):
         self.name = name
-        if self.name is 'cifar100':
+        if self.name == 'cifar100':
             (self.x_train, self.y_train), \
                 (self.x_test, self.y_test) = self.data_set.load_data(
                     label_mode=label_mode)
